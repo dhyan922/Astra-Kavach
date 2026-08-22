@@ -25,11 +25,12 @@ app.use('*', cors());
 const getPaths = (c) => {
   const env = c.env || {};
   return {
-    runsDir: env.CRS_RUNS_DIR || (typeof process !== 'undefined' && process.env.CRS_RUNS_DIR) || "C:/Users/aa/.gemini/antigravity/scratch/cyber_reasoning_system/runs",
-    targetsDir: env.TARGETS_DIR || (typeof process !== 'undefined' && process.env.TARGETS_DIR) || "C:/Users/aa/.gemini/antigravity/scratch/cyber_reasoning_system/targets/vulnerable",
+    runsDir: env.CRS_RUNS_DIR || (typeof process !== 'undefined' && process.env.CRS_RUNS_DIR) || "../cyber_reasoning_system/runs",
+    targetsDir: env.TARGETS_DIR || (typeof process !== 'undefined' && process.env.TARGETS_DIR) || "../cyber_reasoning_system/targets/vulnerable",
     pythonCmd: env.PYTHON_CMD || (typeof process !== 'undefined' && process.env.PYTHON_CMD) || "python"
   };
 };
+
 
 // Defensive ASAN Parser
 const parseAsanReport = (log) => {

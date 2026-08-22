@@ -10,6 +10,7 @@ directory = "./dist"
 binding = "ASSETS"
 
 [vars]
-CRS_RUNS_DIR = "C:/Users/aa/.gemini/antigravity/scratch/cyber_reasoning_system/runs"
-TARGETS_DIR = "C:/Users/aa/.gemini/antigravity/scratch/cyber_reasoning_system/targets/vulnerable"
+CRS_RUNS_DIR = "../cyber_reasoning_system/runs"
+TARGETS_DIR = "../cyber_reasoning_system/targets/vulnerable"
 PYTHON_CMD = "python"
+
