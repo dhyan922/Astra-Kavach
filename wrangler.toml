@@ -1,0 +1,15 @@
+name = "ai-kavach"
+main = "src/server.js"
+compatibility_date = "2024-09-23"
+compatibility_flags = [ "nodejs_compat_v2" ]
+
+
+
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+
+[vars]
+CRS_RUNS_DIR = "C:/Users/aa/.gemini/antigravity/scratch/cyber_reasoning_system/runs"
+TARGETS_DIR = "C:/Users/aa/.gemini/antigravity/scratch/cyber_reasoning_system/targets/vulnerable"
+PYTHON_CMD = "python"
