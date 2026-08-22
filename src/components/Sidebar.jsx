@@ -19,13 +19,20 @@ export default function Sidebar({ isOpen }) {
       <div>
         {/* Brand/Logo */}
         <div className="p-6 border-b border-cyber-green/15 flex items-center gap-3 whitespace-nowrap">
-          <div className="relative w-8 h-8 rounded border border-cyber-green flex items-center justify-center bg-cyber-green/10 shadow-[0_0_8px_rgba(0,255,102,0.3)]">
-            <Shield className="w-5 h-5 text-cyber-green" />
-            <Zap className="w-2.5 h-2.5 text-cyber-amber absolute" />
+          <div className="w-9 h-9 flex items-center justify-center">
+            <svg className="w-8 h-8 filter drop-shadow-[0_0_4px_rgba(0,255,102,0.4)]" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+              {/* Outer Hexagon Shield */}
+              <path d="M50 5 L90 25 V75 L50 95 L10 75 V25 L50 5Z" stroke="#00FF66" strokeWidth="6" strokeLinejoin="round" fill="rgba(0, 255, 102, 0.08)" />
+              {/* Inner Hexagon */}
+              <path d="M50 18 L78 32 V68 L50 82 L22 68 V32 L50 18Z" stroke="#00FF66" strokeWidth="2.5" strokeDasharray="6 3" />
+              {/* Center Core: Cyber Bolt / Astra Energy */}
+              <path d="M50 25 L65 48 H52 L55 75 L35 48 H48 L50 25Z" fill="#F59E0B" />
+            </svg>
           </div>
           <div>
             <h1 className="font-extrabold text-sm tracking-widest text-white uppercase">Astra Kavach</h1>
             <span className="text-[10px] text-cyber-green/70 tracking-wider">TACTICAL AUTO-SHIELD</span>
+
           </div>
         </div>
 

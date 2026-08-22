@@ -48,13 +48,6 @@ export default function Navbar({ sidebarOpen, setSidebarOpen }) {
           </span>
         </div>
 
-        {/* Status Indicator */}
-        <div className="flex items-center gap-2 bg-cyber-green/10 border border-cyber-green/30 px-3 py-1 rounded shadow-[0_0_12px_rgba(0,255,102,0.1)]">
-          <span className="w-2.5 h-2.5 rounded-full bg-cyber-green animate-pulse shadow-[0_0_8px_#00ff66]"></span>
-          <span className="text-[11px] font-mono font-bold text-cyber-green tracking-wider uppercase">
-            ONLINE
-          </span>
-        </div>
       </div>
     </header>
   );
