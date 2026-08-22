@@ -27,11 +27,14 @@ app.use('*', cors());
 const getPaths = (c) => {
   const env = c.env || {};
   return {
-    runsDir: env.CRS_RUNS_DIR || (typeof process !== 'undefined' && process.env.CRS_RUNS_DIR) || "../cyber_reasoning_system/runs",
+    runsDir: env.CRS_RUNS_DIR || (typeof process !== 'undefined' && process.env.CRS_RUNS_DIR) || "./runs",
     targetsDir: env.TARGETS_DIR || (typeof process !== 'undefined' && process.env.TARGETS_DIR) || "./targets/vulnerable",
     pythonCmd: env.PYTHON_CMD || (typeof process !== 'undefined' && process.env.PYTHON_CMD) || "python"
   };
 };
+
+// Default mock runs data store...
+
 
 
 // Defensive ASAN Parser
@@ -419,17 +422,21 @@ app.post('/api/scan', async (c) => {
       const pathModule = await import('path');
 
       // Build C/Python command line trigger bridge
-      const absoluteTarget = pathModule.join(paths.targetsDir, target);
+      const absoluteTarget = pathModule.resolve(paths.targetsDir, target);
       if (!fsModule.existsSync(absoluteTarget)) {
         scanState.status = "FAILED";
         scanState.logs.push(`[EVT-002] [FAILED] Target file not found: ${absoluteTarget}`);
         return c.json({ scan_id: scanId, status: "FAILED" });
       }
 
+      // Base engine directory where core.orchestrator resides
+      const engineDir = pathModule.resolve("../cyber_reasoning_system");
+      const projectDir = pathModule.resolve("."); // local ai-kavach workspace root
+
       // Execute Python CRS orchestrator pipeline bridge
-      const cmdStr = `import sys; sys.path.insert(0, r'${pathModule.dirname(paths.targetsDir)}'); from core.orchestrator import CRSOrchestrator; orchestrator = CRSOrchestrator(r'${pathModule.dirname(paths.targetsDir)}', run_id='${scanId}'); orchestrator.execute_pipeline(r'targets/vulnerable/${target}')`;
+      const cmdStr = `import sys; sys.path.insert(0, r'${engineDir}'); from core.orchestrator import CRSOrchestrator; orchestrator = CRSOrchestrator(r'${projectDir}', run_id='${scanId}'); orchestrator.execute_pipeline(r'targets/vulnerable/${target}')`;
       const child = childModule.spawn(paths.pythonCmd, ['-c', cmdStr], {
-        cwd: pathModule.dirname(paths.targetsDir),
+        cwd: projectDir,
         shell: true
       });
 
@@ -559,18 +566,29 @@ app.get('/api/scan/:scanId', async (c) => {
       scan.progress = 100;
       scan.logs.push(`[EVT-009] [COMPLETED] Patch verification PASS. Signed-off and registered.`);
       
-      // Inject standard patch diff matching target and vulnerability type
-      const vulnType = scan.vulnerability_type || "Command Injection";
+      // Inject standard patch diff matching target and vulnerability type automatically
+      const code = customTargets.get(scan.target) || "";
       
-      if (scan.target.includes('analyzer') || vulnType === 'Command Injection') {
+      let detectedVuln = "Command Injection";
+      if (scan.target.includes('analyzer') || code.includes('subprocess') || code.includes('system(')) {
+        detectedVuln = "Command Injection";
+      } else if (scan.target.includes('division') || scan.target.includes('div') || (code.includes('/') && !code.includes('import'))) {
+        detectedVuln = "Zero Division";
+      } else if (scan.target.includes('eval') || scan.target.includes('calc') || code.includes('eval(')) {
+        detectedVuln = "Code Execution";
+      } else if (scan.target.endsWith('.c') || scan.target.endsWith('.cpp')) {
+        detectedVuln = "Buffer Overflow";
+      }
+      
+      if (detectedVuln === 'Command Injection') {
         scan.vulnerability = "Command Injection";
         scan.patch_diff = mockRuns["CRS-20260810-055823"].patch_diff;
         scan.verification_stages = mockRuns["CRS-20260810-055823"].verification_stages;
-      } else if (scan.target.includes('division') || scan.target.includes('div') || vulnType === 'Zero Division') {
+      } else if (detectedVuln === 'Zero Division') {
         scan.vulnerability = "Division by Zero Error";
         scan.patch_diff = mockRuns["CRS-20260812-110243"].patch_diff;
         scan.verification_stages = mockRuns["CRS-20260812-110243"].verification_stages;
-      } else if (scan.target.includes('eval') || vulnType === 'Code Execution') {
+      } else if (detectedVuln === 'Code Execution') {
         scan.vulnerability = "Arbitrary Code Execution";
         scan.patch_diff = `--- targets/vulnerable/${scan.target}\n+++ C:/Users/aa/.gemini/antigravity/scratch/ai-kavach/dist/${scan.target}\n@@ -6,6 +6,11 @@\n-    return float(eval(expression))\n+    import ast\n+    try:\n+        tree = ast.parse(expression, mode='eval')\n+        # Replaced unsafe eval with safe AST evaluator\n+        return evaluate_ast_node(tree.body)\n+    except Exception:\n+        raise ValueError("Blocked unsafe execution expression")`;
         scan.verification_stages = [
