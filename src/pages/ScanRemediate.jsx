@@ -13,8 +13,48 @@ export default function ScanRemediate() {
   const [scanId, setScanId] = useState('');
   const [scanning, setScanning] = useState(false);
   const [scanState, setScanState] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadSuccess, setUploadSuccess] = useState('');
   
   const consoleEndRef = useRef(null);
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploading(true);
+    setUploadSuccess('');
+    
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUploadSuccess(`Uploaded "${data.name}" successfully!`);
+        // Refresh targets
+        const listRes = await fetch('/api/targets');
+        if (listRes.ok) {
+          const listData = await listRes.json();
+          setTargets(listData);
+          setSelectedTarget(data.name);
+        }
+      } else {
+        console.error("Upload failed");
+        setUploadSuccess("Upload failed. Verify file parameters.");
+      }
+    } catch (err) {
+      console.error("Upload error:", err);
+      setUploadSuccess("Upload error. Try again.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
 
   // Core 8-stage pipeline names
   const stages = [
@@ -147,7 +187,25 @@ export default function ScanRemediate() {
         
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
           <div className="space-y-2">
-            <label className="text-xs font-mono text-cyber-light/40">Select Target File</label>
+            <div className="flex justify-between items-center">
+              <label className="text-xs font-mono text-cyber-light/40">Select Target File</label>
+              <label className="text-[10px] font-mono text-cyber-green hover:underline cursor-pointer flex items-center gap-1 select-none">
+                {uploading ? (
+                  <span className="animate-pulse">Uploading...</span>
+                ) : (
+                  <>
+                    <span>[+] Upload Custom</span>
+                    <input
+                      type="file"
+                      accept=".py,.c,.cpp,.java,.js,.go,.rs,.txt"
+                      onChange={handleFileUpload}
+                      disabled={scanning || uploading}
+                      className="hidden"
+                    />
+                  </>
+                )}
+              </label>
+            </div>
             <select
               value={selectedTarget}
               onChange={(e) => setSelectedTarget(e.target.value)}
@@ -158,6 +216,11 @@ export default function ScanRemediate() {
                 <option key={t.name} value={t.name}>{t.name}</option>
               ))}
             </select>
+            {uploadSuccess && (
+              <div className="text-[9px] font-mono text-cyber-green animate-fadeIn whitespace-nowrap overflow-hidden text-ellipsis">
+                {uploadSuccess}
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">

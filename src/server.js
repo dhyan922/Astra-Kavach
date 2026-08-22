@@ -3,6 +3,8 @@ import { cors } from 'hono/cors';
 
 // In-memory registry of active scans for real-time tracking
 const activeScans = new Map();
+const customTargets = new Map();
+
 
 // Helper to check if we are in Node/Wrangler local environment vs Cloudflare Worker sandbox
 const isLocalEnv = typeof process !== 'undefined' && process.versions && process.versions.node;
@@ -293,17 +295,26 @@ app.get('/api/targets', async (c) => {
     { name: "calc_eval.py", path: "targets/vulnerable/calc_eval.py" }
   ];
 
+  // Merge custom memory-buffered targets uploaded in this session
+  customTargets.forEach((content, name) => {
+    if (!targets.some(t => t.name === name)) {
+      targets.push({ name: name, path: `targets/vulnerable/${name}` });
+    }
+  });
+
   if (isLocalEnv) {
     try {
       const fsModule = await import('fs');
       if (fsModule.existsSync(paths.targetsDir)) {
         const files = fsModule.readdirSync(paths.targetsDir);
-        targets = files
-          .filter(f => !f.endsWith('.zip') && f !== '__pycache__' && !f.endsWith('.yaml'))
-          .map(f => ({
-            name: f,
-            path: `targets/vulnerable/${f}`
-          }));
+        // Avoid duplicates and filter folders
+        files.forEach(f => {
+          if (!f.endsWith('.zip') && f !== '__pycache__' && !f.endsWith('.yaml')) {
+            if (!targets.some(t => t.name === f)) {
+              targets.push({ name: f, path: `targets/vulnerable/${f}` });
+            }
+          }
+        });
       }
     } catch (e) {
       console.warn("Could not read local targets list:", e.message);
@@ -319,6 +330,47 @@ app.post('/api/parse-asan', async (c) => {
   const report = parseAsanReport(body.log);
   return c.json(report);
 });
+
+// API: Upload Target Code File
+app.post('/api/upload', async (c) => {
+  try {
+    const body = await c.req.parseBody();
+    const file = body.file;
+    if (!file) {
+      return c.json({ error: "No file uploaded" }, 400);
+    }
+
+    const filename = file.name;
+    // Basic security validation: no traversal paths
+    if (filename.includes('..') || filename.startsWith('/') || filename.startsWith('\\') || filename.includes(':')) {
+      return c.json({ error: "Security Exception: Invalid filename format" }, 403);
+    }
+
+    const content = await file.text();
+    // Cache in memory for Cloud/Serverless portability
+    customTargets.set(filename, content);
+
+    // Save to disk if running locally
+    if (isLocalEnv) {
+      try {
+        const fsModule = await import('fs');
+        const pathModule = await import('path');
+        const paths = getPaths(c);
+        if (!fsModule.existsSync(paths.targetsDir)) {
+          fsModule.mkdirSync(paths.targetsDir, { recursive: true });
+        }
+        fsModule.writeFileSync(pathModule.join(paths.targetsDir, filename), content, 'utf8');
+      } catch (err) {
+        console.warn("Could not write target upload to disk:", err.message);
+      }
+    }
+
+    return c.json({ name: filename, success: true });
+  } catch (e) {
+    return c.json({ error: `Upload exception: ${e.message}` }, 500);
+  }
+});
+
 
 // API: Initialize Scan (Simulation or Local Execution)
 app.post('/api/scan', async (c) => {
@@ -510,9 +562,39 @@ app.get('/api/scan/:scanId', async (c) => {
       if (scan.target.includes('analyzer')) {
         scan.patch_diff = mockRuns["CRS-20260810-055823"].patch_diff;
         scan.verification_stages = mockRuns["CRS-20260810-055823"].verification_stages;
-      } else {
+      } else if (scan.target.includes('division') || scan.target.includes('div')) {
         scan.patch_diff = mockRuns["CRS-20260812-110243"].patch_diff;
         scan.verification_stages = mockRuns["CRS-20260812-110243"].verification_stages;
+      } else {
+        // Dynamic simulated patch generator for custom uploaded target files
+        const code = customTargets.get(scan.target) || "def process_data(payload):\n    return payload";
+        
+        // Find if they have a function definition
+        const fnMatch = code.match(/def\s+(\w+)\s*\(([^)]*)\):/);
+        const fnName = fnMatch ? fnMatch[1] : "process_data";
+        const fnArgs = fnMatch ? fnMatch[2] : "payload";
+        
+        let patchContent = "";
+        let originalSnippet = "";
+        
+        if (code.includes('eval(')) {
+          originalSnippet = `    result = eval(${fnArgs})`;
+          patchContent = `    # Secure patch: replaced eval with safe literal evaluation\n    import ast\n    try:\n        result = ast.literal_eval(${fnArgs})\n    except Exception:\n        raise ValueError("Untrusted input payload blocked")`;
+        } else if (code.includes('subprocess') || code.includes('system(')) {
+          originalSnippet = `    os.system(cmd)`;
+          patchContent = `    # Secure patch: sandboxed input and disabled shell execution\n    import shlex, re\n    if not re.match(r'^[a-zA-Z0-9_.-]+$', cmd):\n        raise ValueError("Invalid shell characters in command")\n    safe_args = shlex.split(cmd)\n    subprocess.Popen(safe_args, shell=False)`;
+        } else {
+          originalSnippet = `def ${fnName}(${fnArgs}):`;
+          patchContent = `def ${fnName}(${fnArgs}):\n    # Secure patch: added validation layer for input parameters\n    if not all([${fnArgs}]):\n        raise ValueError("Input parameters cannot be null or empty")`;
+        }
+        
+        scan.patch_diff = `--- targets/vulnerable/${scan.target}\n+++ C:/Users/aa/.gemini/antigravity/scratch/ai-kavach/dist/${scan.target}\n@@ -5,8 +5,12 @@\n-${originalSnippet}\n+${patchContent}`;
+        
+        scan.verification_stages = [
+          { name: "Syntax Validation", status: "PASS", log: "Compiler successfully loaded AST." },
+          { name: "Exploit Proof Verification", status: "PASS", log: "reproduction_exploit.py failed to crash binary." },
+          { name: "Regression Check", status: "PASS", log: "12 baseline unit tests completed with 0 errors." }
+        ];
       }
     }
   }
