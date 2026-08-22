@@ -9,6 +9,7 @@ export default function ScanRemediate() {
   const [targets, setTargets] = useState([]);
   const [selectedTarget, setSelectedTarget] = useState('');
   const [mode, setMode] = useState('simulation'); // "simulation" | "local"
+  const [vulnerabilityType, setVulnerabilityType] = useState('Command Injection');
   
   const [scanId, setScanId] = useState('');
   const [scanning, setScanning] = useState(false);
@@ -122,7 +123,7 @@ export default function ScanRemediate() {
       const res = await fetch('/api/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ target: selectedTarget, mode })
+        body: JSON.stringify({ target: selectedTarget, mode, vulnerabilityType })
       });
       if (res.ok) {
         const data = await res.json();
@@ -185,7 +186,7 @@ export default function ScanRemediate() {
       <div className="bg-cyber-black/40 backdrop-blur-sm border border-cyber-green/15 rounded-xl p-6">
         <h3 className="text-sm font-mono uppercase tracking-widest text-cyber-green font-extrabold mb-4">Pipeline Controller</h3>
         
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 items-end">
           <div className="space-y-2">
             <div className="flex justify-between items-center">
               <label className="text-xs font-mono text-cyber-light/40">Select Target File</label>
@@ -221,6 +222,21 @@ export default function ScanRemediate() {
                 {uploadSuccess}
               </div>
             )}
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-mono text-cyber-light/40">Simulate Vulnerability</label>
+            <select
+              value={vulnerabilityType}
+              onChange={(e) => setVulnerabilityType(e.target.value)}
+              disabled={scanning}
+              className="w-full bg-cyber-black border border-cyber-green/20 rounded px-3 py-2 text-xs text-white focus:outline-none focus:border-cyber-green font-mono"
+            >
+              <option value="Command Injection">Command Injection (OS Exploit)</option>
+              <option value="Zero Division">Zero Division (Arithmetic)</option>
+              <option value="Code Execution">Code Execution (eval/exec)</option>
+              <option value="Buffer Overflow">Buffer Overflow (Memory ASAN)</option>
+            </select>
           </div>
 
           <div className="space-y-2">

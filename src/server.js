@@ -376,7 +376,7 @@ app.post('/api/upload', async (c) => {
 app.post('/api/scan', async (c) => {
   const paths = getPaths(c);
   const body = await c.req.json();
-  const { target, mode } = body; // mode: "simulation" | "local"
+  const { target, mode, vulnerabilityType } = body; // mode: "simulation" | "local"
 
   if (!target) {
     return c.json({ error: "Target parameter is required" }, 400);
@@ -395,6 +395,7 @@ app.post('/api/scan', async (c) => {
     scan_id: scanId,
     target: target,
     mode: mode,
+    vulnerability_type: vulnerabilityType || "Command Injection",
     status: "RUNNING",
     stage: "INTAKE",
     progress: 12,
@@ -558,42 +559,32 @@ app.get('/api/scan/:scanId', async (c) => {
       scan.progress = 100;
       scan.logs.push(`[EVT-009] [COMPLETED] Patch verification PASS. Signed-off and registered.`);
       
-      // Inject standard patch diff matching target
-      if (scan.target.includes('analyzer')) {
+      // Inject standard patch diff matching target and vulnerability type
+      const vulnType = scan.vulnerability_type || "Command Injection";
+      
+      if (scan.target.includes('analyzer') || vulnType === 'Command Injection') {
+        scan.vulnerability = "Command Injection";
         scan.patch_diff = mockRuns["CRS-20260810-055823"].patch_diff;
         scan.verification_stages = mockRuns["CRS-20260810-055823"].verification_stages;
-      } else if (scan.target.includes('division') || scan.target.includes('div')) {
+      } else if (scan.target.includes('division') || scan.target.includes('div') || vulnType === 'Zero Division') {
+        scan.vulnerability = "Division by Zero Error";
         scan.patch_diff = mockRuns["CRS-20260812-110243"].patch_diff;
         scan.verification_stages = mockRuns["CRS-20260812-110243"].verification_stages;
-      } else {
-        // Dynamic simulated patch generator for custom uploaded target files
-        const code = customTargets.get(scan.target) || "def process_data(payload):\n    return payload";
-        
-        // Find if they have a function definition
-        const fnMatch = code.match(/def\s+(\w+)\s*\(([^)]*)\):/);
-        const fnName = fnMatch ? fnMatch[1] : "process_data";
-        const fnArgs = fnMatch ? fnMatch[2] : "payload";
-        
-        let patchContent = "";
-        let originalSnippet = "";
-        
-        if (code.includes('eval(')) {
-          originalSnippet = `    result = eval(${fnArgs})`;
-          patchContent = `    # Secure patch: replaced eval with safe literal evaluation\n    import ast\n    try:\n        result = ast.literal_eval(${fnArgs})\n    except Exception:\n        raise ValueError("Untrusted input payload blocked")`;
-        } else if (code.includes('subprocess') || code.includes('system(')) {
-          originalSnippet = `    os.system(cmd)`;
-          patchContent = `    # Secure patch: sandboxed input and disabled shell execution\n    import shlex, re\n    if not re.match(r'^[a-zA-Z0-9_.-]+$', cmd):\n        raise ValueError("Invalid shell characters in command")\n    safe_args = shlex.split(cmd)\n    subprocess.Popen(safe_args, shell=False)`;
-        } else {
-          originalSnippet = `def ${fnName}(${fnArgs}):`;
-          patchContent = `def ${fnName}(${fnArgs}):\n    # Secure patch: added validation layer for input parameters\n    if not all([${fnArgs}]):\n        raise ValueError("Input parameters cannot be null or empty")`;
-        }
-        
-        scan.patch_diff = `--- targets/vulnerable/${scan.target}\n+++ C:/Users/aa/.gemini/antigravity/scratch/ai-kavach/dist/${scan.target}\n@@ -5,8 +5,12 @@\n-${originalSnippet}\n+${patchContent}`;
-        
+      } else if (scan.target.includes('eval') || vulnType === 'Code Execution') {
+        scan.vulnerability = "Arbitrary Code Execution";
+        scan.patch_diff = `--- targets/vulnerable/${scan.target}\n+++ C:/Users/aa/.gemini/antigravity/scratch/ai-kavach/dist/${scan.target}\n@@ -6,6 +6,11 @@\n-    return float(eval(expression))\n+    import ast\n+    try:\n+        tree = ast.parse(expression, mode='eval')\n+        # Replaced unsafe eval with safe AST evaluator\n+        return evaluate_ast_node(tree.body)\n+    except Exception:\n+        raise ValueError("Blocked unsafe execution expression")`;
         scan.verification_stages = [
-          { name: "Syntax Validation", status: "PASS", log: "Compiler successfully loaded AST." },
-          { name: "Exploit Proof Verification", status: "PASS", log: "reproduction_exploit.py failed to crash binary." },
-          { name: "Regression Check", status: "PASS", log: "12 baseline unit tests completed with 0 errors." }
+          { name: "Syntax Validation", status: "PASS", log: "AST parser checks pass." },
+          { name: "Exploit Proof Verification", status: "PASS", log: "reproduction_exploit.py failed to crash." },
+          { name: "Regression Check", status: "PASS", log: "Verification tests successful." }
+        ];
+      } else {
+        scan.vulnerability = "Stack Buffer Overflow (ASAN)";
+        scan.patch_diff = `--- targets/vulnerable/${scan.target}\n+++ C:/Users/aa/.gemini/antigravity/scratch/ai-kavach/dist/${scan.target}\n@@ -10,4 +10,8 @@\n-    strcpy(buffer, user_input);\n+    // Defensive bounds patch to prevent ASAN stack overflows\n+    if (strlen(user_input) >= sizeof(buffer)) {\n+        return -1; // Block overflow access\n+    }\n+    strncpy(buffer, user_input, sizeof(buffer) - 1);\n+    buffer[sizeof(buffer) - 1] = '\\0';`;
+        scan.verification_stages = [
+          { name: "ASAN Bounds Check", status: "PASS", log: "AddressSanitizer boundaries validation successful." },
+          { name: "Exploit Retest", status: "PASS", log: "Crash reproduction failed to trigger overflow." },
+          { name: "System Integration Check", status: "PASS", log: "Functional suite test execution PASS." }
         ];
       }
     }
