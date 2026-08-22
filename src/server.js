@@ -584,10 +584,45 @@ app.get('/api/scan/:scanId', async (c) => {
         scan.vulnerability = "Command Injection";
         scan.patch_diff = mockRuns["CRS-20260810-055823"].patch_diff;
         scan.verification_stages = mockRuns["CRS-20260810-055823"].verification_stages;
+        scan.patched_code = `import subprocess
+import os
+import shlex
+import re
+
+def analyze_domain(domain: str) -> str:
+    """
+    Performs ping check on the target domain safely.
+    Patched against command injection.
+    """
+    if not re.match(r"^[a-zA-Z0-9.-]+$", domain):
+        return "Error: Invalid domain format"
+    
+    cmd = ["ping", "-n", "1", domain]
+    try:
+        process = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        stdout, stderr = process.communicate(timeout=5)
+        return stdout if process.returncode == 0 else f"Error: {stderr or stdout}"
+    except Exception as e:
+        return f"Error: {str(e)}"
+`;
       } else if (detectedVuln === 'Zero Division') {
         scan.vulnerability = "Division by Zero Error";
         scan.patch_diff = mockRuns["CRS-20260812-110243"].patch_diff;
         scan.verification_stages = mockRuns["CRS-20260812-110243"].verification_stages;
+        scan.patched_code = `def divide_values(numerator, denominator):
+    """
+    Safely divides numerator by denominator.
+    Patched against ZeroDivisionError and TypeError.
+    """
+    try:
+        num = float(numerator)
+        denom = float(denominator)
+        if denom == 0.0:
+            return "Error: Division by zero"
+        return num / denom
+    except (ValueError, TypeError):
+        return "Error: Invalid numeric input"
+`;
       } else if (detectedVuln === 'Code Execution') {
         scan.vulnerability = "Arbitrary Code Execution";
         scan.patch_diff = `--- targets/vulnerable/${scan.target}\n+++ C:/Users/aa/.gemini/antigravity/scratch/ai-kavach/dist/${scan.target}\n@@ -6,6 +6,11 @@\n-    return float(eval(expression))\n+    import ast\n+    try:\n+        tree = ast.parse(expression, mode='eval')\n+        # Replaced unsafe eval with safe AST evaluator\n+        return evaluate_ast_node(tree.body)\n+    except Exception:\n+        raise ValueError("Blocked unsafe execution expression")`;
@@ -596,6 +631,33 @@ app.get('/api/scan/:scanId', async (c) => {
           { name: "Exploit Proof Verification", status: "PASS", log: "reproduction_exploit.py failed to crash." },
           { name: "Regression Check", status: "PASS", log: "Verification tests successful." }
         ];
+        scan.patched_code = `import ast
+import operator
+
+def evaluate_expression(expression: str) -> float:
+    """
+    Evaluates a simple mathematical expression safely without using eval().
+    """
+    operators = {
+        ast.Add: operator.add,
+        ast.Sub: operator.sub,
+        ast.Mult: operator.mul,
+        ast.Div: operator.truediv
+    }
+    def _eval(node):
+        if isinstance(node, ast.Num):
+            return node.n
+        elif isinstance(node, ast.Constant):
+            return node.value
+        elif isinstance(node, ast.BinOp):
+            return operators[type(node.op)](_eval(node.left), _eval(node.right))
+        raise TypeError("Unsupported expression node")
+    try:
+        tree = ast.parse(expression, mode="eval")
+        return float(_eval(tree.body))
+    except Exception as e:
+        raise ValueError(f"Unsafe or invalid math expression: {str(e)}")
+`;
       } else {
         scan.vulnerability = "Stack Buffer Overflow (ASAN)";
         scan.patch_diff = `--- targets/vulnerable/${scan.target}\n+++ C:/Users/aa/.gemini/antigravity/scratch/ai-kavach/dist/${scan.target}\n@@ -10,4 +10,8 @@\n-    strcpy(buffer, user_input);\n+    // Defensive bounds patch to prevent ASAN stack overflows\n+    if (strlen(user_input) >= sizeof(buffer)) {\n+        return -1; // Block overflow access\n+    }\n+    strncpy(buffer, user_input, sizeof(buffer) - 1);\n+    buffer[sizeof(buffer) - 1] = '\\0';`;
@@ -604,6 +666,22 @@ app.get('/api/scan/:scanId', async (c) => {
           { name: "Exploit Retest", status: "PASS", log: "Crash reproduction failed to trigger overflow." },
           { name: "System Integration Check", status: "PASS", log: "Functional suite test execution PASS." }
         ];
+        scan.patched_code = `// Patched memory buffer wrapper
+#include <string.h>
+#include <stdio.h>
+
+int process_input_safely(const char *user_input) {
+    char buffer[128];
+    // Defensive bounds patch to prevent ASAN stack overflows
+    if (strlen(user_input) >= sizeof(buffer)) {
+        return -1; // Block overflow access
+    }
+    strncpy(buffer, user_input, sizeof(buffer) - 1);
+    buffer[sizeof(buffer) - 1] = '\\0';
+    printf("Processed input: %s\\n", buffer);
+    return 0;
+}
+`;
       }
     }
   }

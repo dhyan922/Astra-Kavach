@@ -135,6 +135,20 @@ export default function ScanRemediate() {
       setScanning(false);
     }
   };
+  const handleDownloadPatchedCode = () => {
+    if (!scanState?.patched_code) return;
+    const filename = scanState.target.startsWith('patched_') ? scanState.target : `remediated_${scanState.target}`;
+    const blob = new Blob([scanState.patched_code], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
 
   const getStageIndex = (currentStage) => {
     if (currentStage === 'COMPLETED') return 8;
@@ -379,6 +393,15 @@ export default function ScanRemediate() {
                 Remediation Code Diff
               </h3>
               {renderDiff(scanState.patch_diff)}
+              {scanState.status === 'COMPLETED' && scanState.patched_code && (
+                <button
+                  onClick={handleDownloadPatchedCode}
+                  className="mt-4 w-full py-2.5 bg-cyber-green text-cyber-black font-mono font-bold text-xs uppercase tracking-wider rounded hover:bg-cyber-green/80 transition-all duration-200 shadow-[0_0_12px_rgba(0,255,102,0.15)] flex items-center justify-center gap-2"
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  Download Patched Code
+                </button>
+              )}
             </div>
           </div>
         </div>
