@@ -1,5 +1,5 @@
 import React from 'react';
-import { Activity, Cpu, LayoutSidebar } from 'lucide-react';
+import { Activity, Cpu } from 'lucide-react';
 
 export default function Navbar({ sidebarOpen, setSidebarOpen }) {
   return (
@@ -8,11 +8,26 @@ export default function Navbar({ sidebarOpen, setSidebarOpen }) {
         {/* Sidebar Toggle Button */}
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="p-1.5 rounded hover:bg-cyber-gray/20 border border-cyber-green/15 text-cyber-light/60 hover:text-cyber-green transition-all"
+          className="p-1.5 rounded hover:bg-cyber-gray/20 border border-cyber-green/15 text-cyber-light/60 hover:text-cyber-green transition-all flex items-center justify-center"
           title="Toggle Navigation Menu"
         >
-          <LayoutSidebar className="w-5 h-5" />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="w-5 h-5"
+          >
+            <rect width="18" height="18" x="3" y="3" rx="2" />
+            <path d="M9 3v18" />
+          </svg>
         </button>
+
 
         <div className="flex items-center gap-3 border-l border-cyber-green/15 pl-4">
           <Activity className="w-5 h-5 text-cyber-green animate-pulse" />
