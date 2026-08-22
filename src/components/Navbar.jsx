@@ -1,44 +1,47 @@
-import React, { useState, useEffect } from 'react';
-import { Activity, Radio, Cpu } from 'lucide-react';
+import React from 'react';
+import { Activity, Cpu, LayoutSidebar } from 'lucide-react';
 
-export default function Navbar() {
-  const [time, setTime] = useState(new Date());
-
-  useEffect(() => {
-    const timer = setInterval(() => setTime(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
-
+export default function Navbar({ sidebarOpen, setSidebarOpen }) {
   return (
-    <header className="h-16 border-b border-cyber-green/15 bg-cyber-black/80 backdrop-blur-md px-8 flex items-center justify-between sticky top-0 z-50">
-      <div className="flex items-center gap-3">
-        <Activity className="w-5 h-5 text-cyber-green animate-pulse" />
-        <span className="font-mono text-xs text-cyber-light/40">SYSTEM STATUS:</span>
-        <span className="px-2 py-0.5 rounded bg-cyber-green/15 border border-cyber-green/30 text-[10px] font-mono text-cyber-green font-bold uppercase tracking-wider">
-          ORCHESTRATOR ONLINE
-        </span>
+    <header className="h-16 border-b border-cyber-green/15 bg-cyber-black/80 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-50">
+      <div className="flex items-center gap-4">
+        {/* Sidebar Toggle Button */}
+        <button
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          className="p-1.5 rounded hover:bg-cyber-gray/20 border border-cyber-green/15 text-cyber-light/60 hover:text-cyber-green transition-all"
+          title="Toggle Navigation Menu"
+        >
+          <LayoutSidebar className="w-5 h-5" />
+        </button>
+
+        <div className="flex items-center gap-3 border-l border-cyber-green/15 pl-4">
+          <Activity className="w-5 h-5 text-cyber-green animate-pulse" />
+          <span className="font-mono text-xs text-cyber-light/40">SYSTEM STATUS:</span>
+          <span className="px-2 py-0.5 rounded bg-cyber-green/15 border border-cyber-green/30 text-[10px] font-mono text-cyber-green font-bold uppercase tracking-wider">
+            ORCHESTRATOR ACTIVE
+          </span>
+        </div>
       </div>
 
       <div className="flex items-center gap-6">
         {/* Environment Indicator */}
         <div className="flex items-center gap-2">
           <Cpu className="w-4 h-4 text-cyber-amber" />
-          <span className="text-xs text-cyber-light/50">ENV:</span>
+          <span className="text-xs text-cyber-light/50">ENGINE:</span>
           <span className="text-xs font-mono font-bold text-cyber-amber bg-cyber-amber/10 border border-cyber-amber/30 px-2 py-0.5 rounded">
-            LOCAL DEV MODE
+            SANDBOX MODE
           </span>
         </div>
 
-        {/* Date-Time Display */}
-        <div className="text-right font-mono">
-          <div className="text-xs text-white tracking-wider">
-            {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-          </div>
-          <div className="text-[9px] text-cyber-light/40">
-            {time.toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' })}
-          </div>
+        {/* Status Indicator */}
+        <div className="flex items-center gap-2 bg-cyber-green/10 border border-cyber-green/30 px-3 py-1 rounded shadow-[0_0_12px_rgba(0,255,102,0.1)]">
+          <span className="w-2.5 h-2.5 rounded-full bg-cyber-green animate-pulse shadow-[0_0_8px_#00ff66]"></span>
+          <span className="text-[11px] font-mono font-bold text-cyber-green tracking-wider uppercase">
+            ONLINE
+          </span>
         </div>
       </div>
     </header>
   );
 }
+
