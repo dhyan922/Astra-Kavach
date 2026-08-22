@@ -3,7 +3,6 @@ import { cors } from 'hono/cors';
 
 // In-memory registry of active scans for real-time tracking
 const activeScans = new Map();
-const customTargets = new Map();
 
 
 // Helper to check if we are in Node/Wrangler local environment vs Cloudflare Worker sandbox
@@ -298,13 +297,6 @@ app.get('/api/targets', async (c) => {
     { name: "calc_eval.py", path: "targets/vulnerable/calc_eval.py" }
   ];
 
-  // Merge custom memory-buffered targets uploaded in this session
-  customTargets.forEach((content, name) => {
-    if (!targets.some(t => t.name === name)) {
-      targets.push({ name: name, path: `targets/vulnerable/${name}` });
-    }
-  });
-
   if (isLocalEnv) {
     try {
       const fsModule = await import('fs');
@@ -334,52 +326,13 @@ app.post('/api/parse-asan', async (c) => {
   return c.json(report);
 });
 
-// API: Upload Target Code File
-app.post('/api/upload', async (c) => {
-  try {
-    const body = await c.req.parseBody();
-    const file = body.file;
-    if (!file) {
-      return c.json({ error: "No file uploaded" }, 400);
-    }
-
-    const filename = file.name;
-    // Basic security validation: no traversal paths
-    if (filename.includes('..') || filename.startsWith('/') || filename.startsWith('\\') || filename.includes(':')) {
-      return c.json({ error: "Security Exception: Invalid filename format" }, 403);
-    }
-
-    const content = await file.text();
-    // Cache in memory for Cloud/Serverless portability
-    customTargets.set(filename, content);
-
-    // Save to disk if running locally
-    if (isLocalEnv) {
-      try {
-        const fsModule = await import('fs');
-        const pathModule = await import('path');
-        const paths = getPaths(c);
-        if (!fsModule.existsSync(paths.targetsDir)) {
-          fsModule.mkdirSync(paths.targetsDir, { recursive: true });
-        }
-        fsModule.writeFileSync(pathModule.join(paths.targetsDir, filename), content, 'utf8');
-      } catch (err) {
-        console.warn("Could not write target upload to disk:", err.message);
-      }
-    }
-
-    return c.json({ name: filename, success: true });
-  } catch (e) {
-    return c.json({ error: `Upload exception: ${e.message}` }, 500);
-  }
-});
 
 
 // API: Initialize Scan (Simulation or Local Execution)
 app.post('/api/scan', async (c) => {
   const paths = getPaths(c);
   const body = await c.req.json();
-  const { target, mode, vulnerabilityType } = body; // mode: "simulation" | "local"
+  const { target, mode } = body; // mode: "simulation" | "local"
 
   if (!target) {
     return c.json({ error: "Target parameter is required" }, 400);
@@ -398,7 +351,6 @@ app.post('/api/scan', async (c) => {
     scan_id: scanId,
     target: target,
     mode: mode,
-    vulnerability_type: vulnerabilityType || "Command Injection",
     status: "RUNNING",
     stage: "INTAKE",
     progress: 12,
@@ -567,7 +519,17 @@ app.get('/api/scan/:scanId', async (c) => {
       scan.logs.push(`[EVT-009] [COMPLETED] Patch verification PASS. Signed-off and registered.`);
       
       // Inject standard patch diff matching target and vulnerability type automatically
-      const code = customTargets.get(scan.target) || "";
+      let code = "";
+      if (isLocalEnv) {
+        try {
+          const fsModule = await import('fs');
+          const pathModule = await import('path');
+          const absoluteTarget = pathModule.resolve(paths.targetsDir, scan.target);
+          if (fsModule.existsSync(absoluteTarget)) {
+            code = fsModule.readFileSync(absoluteTarget, 'utf8');
+          }
+        } catch (e) {}
+      }
       
       let detectedVuln = "Command Injection";
       if (scan.target.includes('analyzer') || code.includes('subprocess') || code.includes('system(')) {

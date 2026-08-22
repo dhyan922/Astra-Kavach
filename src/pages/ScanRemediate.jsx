@@ -8,52 +8,14 @@ export default function ScanRemediate() {
 
   const [targets, setTargets] = useState([]);
   const [selectedTarget, setSelectedTarget] = useState('');
-  const [mode, setMode] = useState('simulation'); // "simulation" | "local"
+  const [mode] = useState('simulation'); // Always use simulation mode to comply with sandbox rules
   
   const [scanId, setScanId] = useState('');
   const [scanning, setScanning] = useState(false);
   const [scanState, setScanState] = useState(null);
-  const [uploading, setUploading] = useState(false);
-  const [uploadSuccess, setUploadSuccess] = useState('');
   
   const consoleEndRef = useRef(null);
 
-  const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    setUploading(true);
-    setUploadSuccess('');
-    
-    const formData = new FormData();
-    formData.append('file', file);
-
-    try {
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setUploadSuccess(`Uploaded "${data.name}" successfully!`);
-        // Refresh targets
-        const listRes = await fetch('/api/targets');
-        if (listRes.ok) {
-          const listData = await listRes.json();
-          setTargets(listData);
-          setSelectedTarget(data.name);
-        }
-      } else {
-        console.error("Upload failed");
-        setUploadSuccess("Upload failed. Verify file parameters.");
-      }
-    } catch (err) {
-      console.error("Upload error:", err);
-      setUploadSuccess("Upload error. Try again.");
-    } finally {
-      setUploading(false);
-    }
-  };
 
 
   // Core 8-stage pipeline names
@@ -199,27 +161,9 @@ export default function ScanRemediate() {
       <div className="bg-cyber-black/40 backdrop-blur-sm border border-cyber-green/15 rounded-xl p-6">
         <h3 className="text-sm font-mono uppercase tracking-widest text-cyber-green font-extrabold mb-4">Pipeline Controller</h3>
         
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <label className="text-xs font-mono text-cyber-light/40">Select Target File</label>
-              <label className="text-[10px] font-mono text-cyber-green hover:underline cursor-pointer flex items-center gap-1 select-none">
-                {uploading ? (
-                  <span className="animate-pulse">Uploading...</span>
-                ) : (
-                  <>
-                    <span>[+] Upload Custom</span>
-                    <input
-                      type="file"
-                      accept=".py,.c,.cpp,.java,.js,.go,.rs,.txt"
-                      onChange={handleFileUpload}
-                      disabled={scanning || uploading}
-                      className="hidden"
-                    />
-                  </>
-                )}
-              </label>
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+          <div className="md:col-span-2 space-y-2">
+            <label className="text-xs font-mono text-cyber-light/40">Select Target File (Sandbox Environment)</label>
             <select
               value={selectedTarget}
               onChange={(e) => setSelectedTarget(e.target.value)}
@@ -230,50 +174,13 @@ export default function ScanRemediate() {
                 <option key={t.name} value={t.name}>{t.name}</option>
               ))}
             </select>
-            {uploadSuccess && (
-              <div className="text-[9px] font-mono text-cyber-green animate-fadeIn whitespace-nowrap overflow-hidden text-ellipsis">
-                {uploadSuccess}
-              </div>
-            )}
           </div>
 
-          <div className="space-y-2">
-            <label className="text-xs font-mono text-cyber-light/40">Remediation Mode</label>
-            <div className="flex bg-cyber-black rounded border border-cyber-green/20 p-1">
-              <button
-                type="button"
-                onClick={() => setMode('simulation')}
-                disabled={scanning}
-                className={`flex-1 text-center py-1 rounded text-xs font-mono font-bold transition-all ${
-                  mode === 'simulation' ? 'bg-cyber-green text-cyber-black' : 'text-cyber-light/40 hover:text-white'
-                }`}
-              >
-                SIMULATION
-              </button>
-              <button
-                type="button"
-                onClick={() => setMode('local')}
-                disabled={scanning}
-                className={`flex-1 text-center py-1 rounded text-xs font-mono font-bold transition-all ${
-                  mode === 'local' ? 'bg-cyber-amber text-cyber-black' : 'text-cyber-light/40 hover:text-white'
-                }`}
-              >
-                LOCAL WORKSPACE
-              </button>
-            </div>
-          </div>
-
-          <div className="md:col-span-2 text-right">
+          <div className="text-right">
             <button
               onClick={handleStartScan}
               disabled={scanning || !selectedTarget}
-              className={`w-full md:w-auto px-6 py-2.5 rounded font-mono font-bold text-xs uppercase tracking-wider transition-all duration-200 ${
-                scanning
-                  ? 'bg-cyber-light/10 text-cyber-light/30 border border-cyber-light/15 cursor-not-allowed'
-                  : mode === 'local'
-                    ? 'bg-cyber-amber text-cyber-black hover:bg-cyber-amber/80 shadow-[0_0_12px_rgba(245,158,11,0.2)] hover:scale-105'
-                    : 'bg-cyber-green text-cyber-black hover:bg-cyber-green/80 shadow-[0_0_12px_rgba(0,255,102,0.2)] hover:scale-105'
-              }`}
+              className="w-full px-6 py-2.5 rounded font-mono font-bold text-xs uppercase tracking-wider transition-all duration-200 bg-cyber-green text-cyber-black hover:bg-cyber-green/80 shadow-[0_0_12px_rgba(0,255,102,0.2)] hover:scale-105"
             >
               {scanning ? (
                 <span className="flex items-center justify-center gap-2">
