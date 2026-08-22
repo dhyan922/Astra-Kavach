@@ -28,7 +28,7 @@ const getPaths = (c) => {
   const env = c.env || {};
   return {
     runsDir: env.CRS_RUNS_DIR || (typeof process !== 'undefined' && process.env.CRS_RUNS_DIR) || "../cyber_reasoning_system/runs",
-    targetsDir: env.TARGETS_DIR || (typeof process !== 'undefined' && process.env.TARGETS_DIR) || "../cyber_reasoning_system/targets/vulnerable",
+    targetsDir: env.TARGETS_DIR || (typeof process !== 'undefined' && process.env.TARGETS_DIR) || "./targets/vulnerable",
     pythonCmd: env.PYTHON_CMD || (typeof process !== 'undefined' && process.env.PYTHON_CMD) || "python"
   };
 };
