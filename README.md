@@ -4,7 +4,7 @@
 #/ /_\\ \__ \| |_| | | (_| | . \ (_| |\ V / (_| |_| | | |
 #\_/ \_/|___/ \__|_|  \__,_|_|\_\__,_| \_/ \__,_(_)_| |_|
 #
-# 🛡️ Astra Kavach: Autonomous Cyber Reasoning System & Remediation Pipeline for Code Defense
+# 🛡️ AstraKavach: Autonomous Cyber Reasoning System & Remediation Pipeline for Code Defense
 
 Astra Kavach is an autonomous cybersecurity control plane designed to parse, analyze, patch, and verify vulnerabilities in software. Engineered specifically for air-gapped readiness and code-defense simulations, it bridges the gap between active threat discovery and secure source remediation within code sandbox environments.
 
