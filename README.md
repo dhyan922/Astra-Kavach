@@ -8,6 +8,8 @@
 
 Astra Kavach is an autonomous cybersecurity control plane designed to parse, analyze, patch, and verify vulnerabilities in software. Engineered specifically for air-gapped readiness and code-defense simulations, it bridges the gap between active threat discovery and secure source remediation within code sandbox environments.
 
+🔗 **Project Presentation:** [Astra Kavach Pitch Deck (OneDrive)](https://1drv.ms/p/c/e73ea10a80567a41/IQAWn8ZNU768QJq6iSqbH3IDATRdTzTzvSN8gCbPBX5BLfY)
+
 ---
 
 ## 🌟 Core System Architecture
@@ -73,7 +75,6 @@ ai-kavach/
 │   ├── rakshak_url_analyzer.py    # Command injection target
 │   ├── api_division.py            # Zero Division target
 │   └── calc_eval.py               # Safe eval target
-├── AI_Kavach_Presentation_v5.pptx  # Core Hackathon presentation deck
 ├── package.json                   # Project dependencies config
 └── README.md                      # Documentation
 ```
