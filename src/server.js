@@ -383,7 +383,7 @@ app.post('/api/scan', async (c) => {
 
       // Base engine directory where core.orchestrator resides
       const engineDir = pathModule.resolve("../cyber_reasoning_system");
-      const projectDir = pathModule.resolve("."); // local ai-kavach workspace root
+      const projectDir = pathModule.resolve("."); // local AstraKavach workspace root
 
       // Execute Python CRS orchestrator pipeline bridge
       const cmdStr = `import sys; sys.path.insert(0, r'${engineDir}'); from core.orchestrator import CRSOrchestrator; orchestrator = CRSOrchestrator(r'${projectDir}', run_id='${scanId}'); orchestrator.execute_pipeline(r'targets/vulnerable/${target}')`;
@@ -587,7 +587,7 @@ def analyze_domain(domain: str) -> str:
 `;
       } else if (detectedVuln === 'Code Execution') {
         scan.vulnerability = "Arbitrary Code Execution";
-        scan.patch_diff = `--- targets/vulnerable/${scan.target}\n+++ C:/Users/aa/.gemini/antigravity/scratch/ai-kavach/dist/${scan.target}\n@@ -6,6 +6,11 @@\n-    return float(eval(expression))\n+    import ast\n+    try:\n+        tree = ast.parse(expression, mode='eval')\n+        # Replaced unsafe eval with safe AST evaluator\n+        return evaluate_ast_node(tree.body)\n+    except Exception:\n+        raise ValueError("Blocked unsafe execution expression")`;
+        scan.patch_diff = `--- targets/vulnerable/${scan.target}\n+++ C:/Users/aa/.gemini/antigravity/scratch/AstraKavach/dist/${scan.target}\n@@ -6,6 +6,11 @@\n-    return float(eval(expression))\n+    import ast\n+    try:\n+        tree = ast.parse(expression, mode='eval')\n+        # Replaced unsafe eval with safe AST evaluator\n+        return evaluate_ast_node(tree.body)\n+    except Exception:\n+        raise ValueError("Blocked unsafe execution expression")`;
         scan.verification_stages = [
           { name: "Syntax Validation", status: "PASS", log: "AST parser checks pass." },
           { name: "Exploit Proof Verification", status: "PASS", log: "reproduction_exploit.py failed to crash." },
@@ -622,7 +622,7 @@ def evaluate_expression(expression: str) -> float:
 `;
       } else {
         scan.vulnerability = "Stack Buffer Overflow (ASAN)";
-        scan.patch_diff = `--- targets/vulnerable/${scan.target}\n+++ C:/Users/aa/.gemini/antigravity/scratch/ai-kavach/dist/${scan.target}\n@@ -10,4 +10,8 @@\n-    strcpy(buffer, user_input);\n+    // Defensive bounds patch to prevent ASAN stack overflows\n+    if (strlen(user_input) >= sizeof(buffer)) {\n+        return -1; // Block overflow access\n+    }\n+    strncpy(buffer, user_input, sizeof(buffer) - 1);\n+    buffer[sizeof(buffer) - 1] = '\\0';`;
+        scan.patch_diff = `--- targets/vulnerable/${scan.target}\n+++ C:/Users/aa/.gemini/antigravity/scratch/AstraKavach/dist/${scan.target}\n@@ -10,4 +10,8 @@\n-    strcpy(buffer, user_input);\n+    // Defensive bounds patch to prevent ASAN stack overflows\n+    if (strlen(user_input) >= sizeof(buffer)) {\n+        return -1; // Block overflow access\n+    }\n+    strncpy(buffer, user_input, sizeof(buffer) - 1);\n+    buffer[sizeof(buffer) - 1] = '\\0';`;
         scan.verification_stages = [
           { name: "ASAN Bounds Check", status: "PASS", log: "AddressSanitizer boundaries validation successful." },
           { name: "Exploit Retest", status: "PASS", log: "Crash reproduction failed to trigger overflow." },

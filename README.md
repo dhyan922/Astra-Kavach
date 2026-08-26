@@ -61,7 +61,7 @@ graph TD
 ## 📁 Repository Structure
 
 ```
-ai-kavach/
+AstraKavach/
 ├── src/
 │   ├── pages/
 │   │   ├── ScanRemediate.jsx      # Stepper pipeline and target select UI
@@ -92,7 +92,7 @@ Ensure you have **Node.js (v18+)** and **npm** installed.
 1.  **Clone the Repository:**
     ```bash
     git clone <your-github-repo-url>
-    cd ai-kavach
+    cd AstraKavach
     ```
 2.  **Install Node Modules:**
     ```bash
